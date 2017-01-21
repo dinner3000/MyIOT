@@ -1,4 +1,5 @@
-#include <SoftwareSerial.h>
+#include "SoftwareSerial.h"
+#include "SSD1306Spi.h"
 
 struct _panteng {
   unsigned char fixed[2];
@@ -18,7 +19,15 @@ struct _panteng {
   unsigned char crc[2];
 } panteng;
 
-SoftwareSerial mySerial(D1, D2); // RX, TX
+SoftwareSerial mySerial(D1, D3); // RX, TX
+
+// Initialize the OLED display using SPI
+// D5 -> CLK
+// D7 -> MOSI (DOUT)
+// D0 -> RES
+// D2 -> DC
+// D8 -> CS
+SSD1306Spi        display(D0, D2, D8);
 
 void setup()
 {
@@ -27,6 +36,21 @@ void setup()
 
   // set the data rate for the SoftwareSerial port
   mySerial.begin(9600);
+  
+  // Initialising the UI will init the display too.
+  display.init();
+  display.flipScreenVertically();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_16);
+}
+
+void OLedDisplay(int pm1, int pm2_5, int pm10){
+
+  display.clear();
+  display.drawString(0, 2, "PM1.0: " + String(pm1) + " ug/m3");
+  display.drawString(0, 20, "PM2.5: " + String(pm2_5) + " ug/m3");
+  display.drawString(0, 40, "PM10: " + String(pm10) + " ug/m3");
+  display.display();
 }
 
 void loop() // run over and over
@@ -71,6 +95,7 @@ void loop() // run over and over
 
           sprintf(str, "%d: PM1.0: %d ug/m3, PM2.5: %d ug/m3, PM10: %d ug/m3; %d(>0.3), %d(>0.5), %d(>1.0), %d(>2.5), %d(>5), %d(>10)", time++, pm_ug[0], pm_ug[1], pm_ug[2], pm_cnt[0], pm_cnt[1], pm_cnt[2], pm_cnt[3], pm_cnt[4], pm_cnt[5]);
           Serial.println(str);
+          OLedDisplay(pm_ug[0], pm_ug[1], pm_ug[2    ]);
           break;
         }
         break;
