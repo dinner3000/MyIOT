@@ -1,8 +1,10 @@
 #ifndef PANTENGGXRAWDATA_H
 #define PANTENGGXRAWDATA_H
 
+#include <SoftwareSerial.h>
+
 struct PantengGxRawData {
-//public:
+public:
   unsigned char fixed[2];
   unsigned char pm1_ug_cf[2];
   unsigned char pm2_5_ug_cf[2];
@@ -36,9 +38,11 @@ public:
   unsigned int pm10_cnt;
 };
 
+typedef void (*PSGCallBack)(void*);
+
 class PantengSenserGx{
   public:
-    PantengSenserGx(SoftwareSerial*uart, void (*on_data_ready)(PantengGxFormatedData*));
+    PantengSenserGx(SoftwareSerial* uart, PSGCallBack on_data_ready = NULL);
 	~PantengSenserGx();
 	void Read();
 //    bool IsDataReady();
@@ -58,13 +62,15 @@ class PantengSenserGx{
 
   private:
     void formatData();
+    
     SoftwareSerial* _uart = NULL;
     PantengGxRawData* _data = NULL;
     PantengGxFormatedData* _fdata;
+    
     int _dataState = 0;
     int _dataBytes = 0;
 //    bool _dataReady = false;
-    void (*_onDataReady)(PantengGxFormatedData*);
+    PSGCallBack _onDataReady;
 };
 
 #endif

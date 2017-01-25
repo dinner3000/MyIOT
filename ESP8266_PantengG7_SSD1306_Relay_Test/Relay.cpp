@@ -2,6 +2,7 @@
 #include "Relay.h"
 
 Relay::Relay(int pin, RelayState state = Off) {
+//  pinMode(pin, OUTPUT);
   this->_pin = pin;
   this->_state = state;
   this->_ApplyState();
@@ -33,9 +34,11 @@ void Relay::_ApplyState() {
   switch (this->_state) {
   case On:
     digitalWrite(this->_pin, LOW);
+    Serial.println("Pull down pin: " + String(this->_pin));
     break;
   case Off:
     digitalWrite(this->_pin, HIGH);
+    Serial.println("Pull up pin: " + String(this->_pin));
     break;
   default:
     break;

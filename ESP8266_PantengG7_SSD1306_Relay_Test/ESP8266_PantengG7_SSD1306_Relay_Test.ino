@@ -1,8 +1,11 @@
 #include <SoftwareSerial.h>
 #include <SSD1306Spi.h>
-#include <SimpleTimer.h>
+#include "SimpleTimer.h"
 #include "PantengSenserGx.h"
 #include "Relay.h"
+
+void DisplayToOLed(PantengGxFormatedData* data);
+void ProcessPMData(void* p);
 
 // Initialize the OLED display using SPI
 // D5 -> CLK
@@ -17,6 +20,11 @@ SimpleTimer timer;
 Relay relay1(D4, Off);
 Relay relay2(D6, Off);
 
+SoftwareSerial mySerial(D1, D3);
+PantengSenserGx psg(&mySerial, ProcessPMData);
+
+char strBuf[150];
+
 void DisplayToOLed(PantengGxFormatedData* data) {
 
 	display.clear();
@@ -25,34 +33,33 @@ void DisplayToOLed(PantengGxFormatedData* data) {
 	display.drawString(0, 2, strBuf);
 	sprintf(strBuf, "PM2.5: %d, %d(cf)", data->pm2_5_ug, data->pm2_5_ug_cf);
 	display.drawString(0, 20, strBuf);
-	sprintf(strBuf, "PM1.0: %d, %d(cf)", data->pm10_ug, data->pm10_ug_cf);
+	sprintf(strBuf, "PM1.0: %d, %d(cf)", data->pm1_ug, data->pm1_ug_cf);
 	display.drawString(0, 40, strBuf);
 
 	display.display();
 }
 
-void ProcessPMData(PantengGxFormatedData* data) {
+void ProcessPMData(void* p) {
+	PantengGxFormatedData* data = (PantengGxFormatedData*)p;
 	DisplayToOLed(data);
-	timer.run();
+	timer.run(p);
 }
 
-SoftwareSerial mySerial(D1, D3); // RX, TX
-PantengSenserGx psg(&mySerial, ProcessPMData);
 
-char strBuf[100];
-
-void CheckPM25() {
-
+void SetRelayState(void* p) {
+	
 	static const float _VAL_AVG_LOW = 30; //Trigger relay to turn off
 	static const float _VAL_AVG_HIGH = 50; //Trigger relay to turn on
 	static const int _VAL_HIST_LENGTH = 6;
 	static int val_hist[_VAL_HIST_LENGTH];
 	static int val_hist_idx = 0;
 
+	PantengGxFormatedData* data = (PantengGxFormatedData*)p;
+	
 	//Collect value
-	int val = panteng.pm2_5_ug[0] * 256 + panteng.pm2_5_ug[1];
-	val_hist[val_hist_idx] = val;
-	Serial.println("PM2.5 value collected: " + String(val));
+	val_hist[val_hist_idx] = data->pm2_5_ug;
+	sprintf(strBuf, "PM2.5 value collected: %d", data->pm2_5_ug);
+	Serial.println(strBuf);
 	val_hist_idx++;
 	if (val_hist_idx >= _VAL_HIST_LENGTH) {
 		val_hist_idx = 0;
@@ -63,8 +70,8 @@ void CheckPM25() {
 	for (int i = 0; i < _VAL_HIST_LENGTH; i++) {
 		sum += val_hist[i];
 	}
-	float avg = sum / _VAL_HIST_LENGTH;
-	sprintf(strBuf, "PM2.5 AVG value: %.2f", avg);
+	int avg = sum / _VAL_HIST_LENGTH;
+	sprintf(strBuf, "PM2.5 AVG value: %d", avg);
 
 	if (avg > _VAL_AVG_HIGH) {
 		relay1.TurnOn();
@@ -97,7 +104,10 @@ void setup()
 	display.setTextAlignment(TEXT_ALIGN_LEFT);
 	display.setFont(ArialMT_Plain_16);
 
-	timer.setInterval(5000, CheckPM25);
+	timer.setInterval(5000, SetRelayState);
+
+  pinMode(D4, OUTPUT);
+  pinMode(D6, OUTPUT);
 }
 
 

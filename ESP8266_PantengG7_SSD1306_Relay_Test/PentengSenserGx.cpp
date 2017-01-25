@@ -1,7 +1,7 @@
 
 #include "PantengSenserGx.h"
 
-PantengSenserGx::PantengSenserGx(SoftwareSerial* uart, void(*on_data_ready)(PantengGxFormatedData*)) {
+PantengSenserGx::PantengSenserGx(SoftwareSerial* uart, PSGCallBack on_data_ready) {
 	this->_uart = uart;
 	this->_onDataReady = on_data_ready;
 	this->_data = new PantengGxRawData();
@@ -38,7 +38,9 @@ void PantengSenserGx::Read() {
 			if (this->_dataBytes > 28) {
 				this->_dataState = 0;
 				this->formatData();
-				(*this->_onDataReady)(this->_fdata);
+				if (this->_onDataReady != NULL){
+					(*this->_onDataReady)(this->_fdata);
+				}
 				break;
 			}
 			break;
